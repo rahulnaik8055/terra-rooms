@@ -50,8 +50,6 @@ const ACTION_LABELS: Record<string, string> = {
   STATUS_CHANGED: "Status changed",
 };
 
-// ─── Sub-components ──────────────────────────────────────
-
 interface Participant {
   id: string; role: string; joinedAt: string;
   user: { id: string; email: string; name: string; role: string };
@@ -75,11 +73,11 @@ function PropertySectionCard({
   return (
     <Card className="overflow-hidden !p-0">
       <button type="button" onClick={onToggle}
-        className="flex w-full items-center justify-between px-5 py-3.5 text-left transition hover:bg-primary-light/30"
+        className="flex w-full items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 text-left transition hover:bg-primary-light/30"
       >
-        <div className="flex items-center gap-2.5">
-          <span className="text-sm font-medium text-text">{label}</span>
-          <Badge variant={status === "verified" ? "success" : "warning"}>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-sm font-medium text-text truncate">{label}</span>
+          <Badge variant={status === "verified" ? "success" : "warning"} className="shrink-0">
             {status}
           </Badge>
         </div>
@@ -90,7 +88,7 @@ function PropertySectionCard({
         </svg>
       </button>
       {!collapsed && (
-        <div className="border-t border-border px-5 py-4">
+        <div className="border-t border-border px-4 sm:px-5 py-3 sm:py-4">
           {detail != null ? (
             <pre className="max-h-96 overflow-auto text-xs leading-relaxed text-text-secondary">
               {JSON.stringify(detail, null, 2)}
@@ -106,7 +104,7 @@ function PropertySectionCard({
 
 function RestrictedSectionCard({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-[20px] border border-dashed border-border bg-surface/50 px-5 py-3.5">
+    <div className="flex items-center gap-2.5 rounded-[20px] border border-dashed border-border bg-surface/50 px-4 sm:px-5 py-3 sm:py-3.5">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-secondary/30">
         <path d="M7 3V7M7 10H7.01M3 1H11C12.1046 1 13 1.89543 13 3V11C13 12.1046 12.1046 13 11 13H3C1.89543 13 1 12.1046 1 11V3C1 1.89543 1.89543 1 3 1Z"
           stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -116,8 +114,6 @@ function RestrictedSectionCard({ label }: { label: string }) {
     </div>
   );
 }
-
-// ─── Main page ───────────────────────────────────────────
 
 export default function RoomDetailPage() {
   const params = useParams();
@@ -235,7 +231,7 @@ export default function RoomDetailPage() {
 
   if (fetching) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg">
+      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg px-4">
         <div className="flex flex-col items-center gap-3">
           <Spinner size="lg" />
           <p className="text-sm text-text-secondary">Loading workspace...</p>
@@ -246,14 +242,14 @@ export default function RoomDetailPage() {
 
   if (error && !room) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg">
+      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg px-4">
         <div className="max-w-sm text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-error/10">
             <span className="text-lg text-error">!</span>
           </div>
           <p className="mt-4 text-sm font-medium text-text">Could not load room</p>
           <p className="mt-1 text-xs text-text-secondary">{error}</p>
-          <Button className="mt-6" onClick={() => router.push("/dashboard")}>
+          <Button className="mt-6 w-full sm:w-auto" onClick={() => router.push("/dashboard")}>
             Back to dashboard
           </Button>
         </div>
@@ -263,7 +259,7 @@ export default function RoomDetailPage() {
 
   if (!room) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg">
+      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg px-4">
         <ErrorState message="Room not found" onBack={() => router.push("/dashboard")} />
       </div>
     );
@@ -271,10 +267,9 @@ export default function RoomDetailPage() {
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)] bg-bg">
-      <div className="mx-auto max-w-6xl px-6 py-8">
-        {/* Back */}
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
         <button onClick={() => router.push("/dashboard")}
-          className="group mb-6 flex items-center gap-1.5 text-xs text-text-secondary transition hover:text-text"
+          className="group mb-4 sm:mb-6 flex items-center gap-1.5 text-xs text-text-secondary transition hover:text-text"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="transition group-hover:-translate-x-0.5">
             <path d="M9 3L5 7L9 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -282,37 +277,32 @@ export default function RoomDetailPage() {
           Dashboard
         </button>
 
-        {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-text">{room.name}</h1>
-            <p className="mt-1 text-sm text-text-secondary">
+        <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text break-words">{room.name}</h1>
+            <p className="mt-1 text-sm text-text-secondary break-words">
               Created by {room.createdBy.name} &middot; {room.participants.length} participant{room.participants.length !== 1 ? "s" : ""}
             </p>
           </div>
           <RoleBadge role={room.myRole} />
         </div>
 
-        {/* Main grid */}
-        <div className="mt-8 grid gap-8 lg:grid-cols-3">
-          {/* Left column */}
-          <div className="space-y-8 lg:col-span-2">
-            {/* Property section */}
+        <div className="mt-6 sm:mt-8 grid gap-6 sm:gap-8 lg:grid-cols-3">
+          <div className="space-y-6 sm:space-y-8 lg:col-span-2 min-w-0">
             <section>
-              <h2 className="mb-4 text-sm font-semibold text-text">Property</h2>
+              <h2 className="mb-3 sm:mb-4 text-sm font-semibold text-text">Property</h2>
               <div className="space-y-3">
-                {/* Overview card */}
                 <Card className="!p-0 overflow-hidden">
-                  <div className="border-b border-border px-5 py-3.5">
-                    <p className="text-sm font-medium text-text">
+                  <div className="border-b border-border px-4 sm:px-5 py-3 sm:py-3.5">
+                    <p className="text-sm font-medium text-text break-words">
                       {(room.property.address as string) ?? "—"}
                     </p>
-                    <p className="mt-0.5 text-xs text-text-secondary">
+                    <p className="mt-0.5 text-xs text-text-secondary break-words">
                       {[room.property.city as string, room.property.state as string].filter(Boolean).join(", ")}
                       {(room.property.surveyNumber as string) ? ` · Survey ${room.property.surveyNumber}` : ""}
                     </p>
                   </div>
-                  <div className="px-5 py-3">
+                  <div className="px-4 sm:px-5 py-3">
                     <span className="text-xs text-text-secondary">Status: </span>
                     <StatusBadge status={room.status} />
                   </div>
@@ -331,9 +321,8 @@ export default function RoomDetailPage() {
               </div>
             </section>
 
-            {/* Activity log */}
             <section>
-              <h2 className="mb-4 text-sm font-semibold text-text">
+              <h2 className="mb-3 sm:mb-4 text-sm font-semibold text-text">
                 Activity
                 {room.activityLogs.length > 0 && (
                   <span className="ml-2 text-xs font-normal text-text-secondary">{room.activityLogs.length}</span>
@@ -349,19 +338,19 @@ export default function RoomDetailPage() {
                 ) : (
                   room.activityLogs.map((log) => (
                     <Card key={log.id} className="!p-0 overflow-hidden">
-                      <div className="flex items-start justify-between gap-4 px-5 py-3.5">
-                        <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
                           <span className="text-sm font-medium text-text">{log.user.name}</span>
                           <RoleBadge role={log.user.role} />
-                          <span className="hidden text-xs text-text-secondary sm:inline">
+                          <span className="text-xs text-text-secondary">
                             {ACTION_LABELS[log.action] ?? log.action.replace(/_/g, " ")}
                           </span>
                         </div>
                         <span className="shrink-0 text-[11px] text-text-secondary">{formatTimestamp(log.timestamp)}</span>
                       </div>
                       {log.details && (
-                        <div className="border-t border-border px-5 py-3">
-                          <p className="text-xs text-text-secondary">
+                        <div className="border-t border-border px-4 sm:px-5 py-3">
+                          <p className="text-xs text-text-secondary break-words">
                             {log.details.message as string ?? JSON.stringify(log.details)}
                           </p>
                         </div>
@@ -370,14 +359,13 @@ export default function RoomDetailPage() {
                   ))
                 )}
 
-                {/* Post activity form */}
                 <form onSubmit={handlePostActivity} className="flex gap-2">
                   <input type="text" value={activityInput}
                     onChange={(e) => setActivityInput(e.target.value)}
                     placeholder="Add a note to this room..."
-                    className="h-10 flex-1 rounded-xl border border-border bg-surface px-4 text-sm text-text placeholder-text-secondary/50 transition focus:border-primary focus:ring-3 focus:ring-primary/10"
+                    className="h-10 min-w-0 flex-1 rounded-xl border border-border bg-surface px-4 text-sm text-text placeholder-text-secondary/50 transition focus:border-primary focus:ring-3 focus:ring-primary/10"
                   />
-                  <Button type="submit" loading={postingActivity} disabled={!activityInput.trim()}>
+                  <Button type="submit" loading={postingActivity} disabled={!activityInput.trim()} className="shrink-0">
                     Send
                   </Button>
                 </form>
@@ -385,10 +373,8 @@ export default function RoomDetailPage() {
             </section>
           </div>
 
-          {/* Right sidebar */}
-          <aside className="space-y-6">
-            {/* Status stepper */}
-            <Card className="p-6">
+          <aside className="space-y-6 min-w-0">
+            <Card className="p-5 sm:p-6">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Status</h3>
               <div className="mt-5">
                 {STEPS.map((step, i) => {
@@ -415,8 +401,8 @@ export default function RoomDetailPage() {
                           <div className="h-5 w-5 rounded-full border-2 border-border bg-surface" />
                         )}
                       </div>
-                      <div className="pb-6">
-                        <span className={`text-sm transition-colors duration-300 ${isCompleted || isCurrent ? "font-medium text-text" : "text-text-secondary/60"}`}>
+                      <div className="pb-6 min-w-0">
+                        <span className={`text-sm transition-colors duration-300 break-words ${isCompleted || isCurrent ? "font-medium text-text" : "text-text-secondary/60"}`}>
                           {STEP_LABELS[step]}
                         </span>
                         {isCurrent && <Badge className="ml-2">Current</Badge>}
@@ -427,7 +413,7 @@ export default function RoomDetailPage() {
               </div>
 
               {canAdvance && (
-                <Button className="mt-2 w-full" onClick={handleAdvanceStatus} loading={advancingStatus}>
+                <Button className="mt-2 w-full truncate" onClick={handleAdvanceStatus} loading={advancingStatus}>
                   Advance to {STEP_LABELS[nextStatus!]}
                 </Button>
               )}
@@ -439,19 +425,18 @@ export default function RoomDetailPage() {
               )}
 
               {error && (
-                <p className="mt-3 rounded-xl bg-error/10 px-3 py-2 text-xs text-error" role="alert">{error}</p>
+                <p className="mt-3 rounded-xl bg-error/10 px-3 py-2 text-xs text-error break-words" role="alert">{error}</p>
               )}
             </Card>
 
-            {/* Participants */}
-            <Card className="p-6">
+            <Card className="p-5 sm:p-6">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Participants</h3>
               <div className="mt-4 space-y-2.5">
                 {room.participants.map((p) => (
                   <div key={p.id}
-                    className="flex items-center justify-between rounded-xl border border-border px-3.5 py-2.5 transition hover:border-primary/20"
+                    className="flex items-center justify-between rounded-xl border border-border px-3 py-2.5 transition hover:border-primary/20 gap-2"
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-text">{p.user.name}</p>
                       <p className="truncate text-xs text-text-secondary">{p.user.email}</p>
                     </div>
@@ -474,8 +459,8 @@ function ErrorState({ message, onBack }: { message: string; onBack: () => void }
         <span className="text-lg text-error">!</span>
       </div>
       <p className="mt-4 text-sm font-medium text-text">Could not load room</p>
-      <p className="mt-1 text-xs text-text-secondary">{message}</p>
-      <Button className="mt-6" onClick={onBack}>Back to dashboard</Button>
+      <p className="mt-1 text-xs text-text-secondary break-words">{message}</p>
+      <Button className="mt-6 w-full sm:w-auto" onClick={onBack}>Back to dashboard</Button>
     </div>
   );
 }

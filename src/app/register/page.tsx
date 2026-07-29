@@ -26,7 +26,6 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
@@ -34,9 +33,7 @@ export default function RegisterPage() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Registration failed");
-      }
+      if (!res.ok) throw new Error(data.error ?? "Registration failed");
       router.push("/login");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -46,35 +43,30 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg px-6">
+    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg px-4 sm:px-6">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[16px] bg-primary-light">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <div className="mb-6 sm:mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-[16px] bg-primary-light">
+            <svg width="20" height="20" viewBox="0 0 22 22" fill="none" className="sm:w-[22px] sm:h-[22px]">
               <rect x="3" y="8" width="16" height="11" rx="2" stroke="#7C5CFF" strokeWidth="1.5" />
               <path d="M11 3L3 8H19L11 3Z" fill="#7C5CFF" fillOpacity="0.1" stroke="#7C5CFF" strokeWidth="1.5" strokeLinejoin="round" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-text">Create an account</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-text">Create an account</h1>
           <p className="mt-1 text-sm text-text-secondary">
             Join Terra Rooms and start collaborating.
           </p>
         </div>
 
-        <Card className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <Card className="p-6 sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             <Input label="Full name" required value={form.name} onChange={update("name")} placeholder="Jane Doe" />
-
             <Input label="Email" type="email" required value={form.email} onChange={update("email")} placeholder="you@example.com" />
-
             <Input label="Password" type="password" required value={form.password} onChange={update("password")} placeholder="Minimum 8 characters" />
-
             <Select label="Role" required value={form.role} onChange={update("role")} options={ROLES} placeholder="Select a role" />
 
             {error && (
-              <p className="text-sm text-error" role="alert">
-                {error}
-              </p>
+              <p className="text-sm text-error" role="alert">{error}</p>
             )}
 
             <Button type="submit" loading={submitting} className="w-full">
@@ -83,7 +75,7 @@ export default function RegisterPage() {
           </form>
         </Card>
 
-        <p className="mt-6 text-center text-sm text-text-secondary">
+        <p className="mt-5 sm:mt-6 text-center text-sm text-text-secondary">
           Already have an account?{" "}
           <Link href="/login" className="font-medium text-primary hover:text-primary-hover">
             Sign in

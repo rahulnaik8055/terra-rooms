@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { useAuthContext } from "@/providers/AuthProvider";
-import { Button, Input, Select, Card, RoleBadge } from "@/components/ui";
+import { Button, Input, Select, Card } from "@/components/ui";
 
 const ROLES = [
   { value: "BUYER", label: "Buyer" },
@@ -101,16 +101,16 @@ export default function CreateRoomPage() {
   if (loading || !user || user.role !== "BUYER") return null;
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-10">
+    <div className="mx-auto max-w-2xl px-4 sm:px-6 py-6 sm:py-10">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-text">Create room</h1>
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text">Create room</h1>
         <p className="mt-1 text-sm text-text-secondary">
           Set up a new due diligence workspace.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-10 space-y-8">
-        <Card className="space-y-6 p-8">
+      <form onSubmit={handleSubmit} className="mt-6 sm:mt-10 space-y-6 sm:space-y-8">
+        <Card className="space-y-5 sm:space-y-6 p-6 sm:p-8">
           <Input label="Room name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Seaside Villa Acquisition" />
 
           <Select
@@ -126,14 +126,14 @@ export default function CreateRoomPage() {
           />
         </Card>
 
-        <Card className="p-8">
+        <Card className="p-6 sm:p-8">
           <h2 className="text-sm font-semibold text-text">Participants</h2>
           <p className="mt-0.5 text-xs text-text-secondary">
             Search by email to add participants. You will be added automatically as Buyer.
           </p>
 
-          <div className="mt-4 flex items-end gap-2">
-            <div className="flex-1">
+          <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
+            <div className="flex-1 min-w-0">
               <Input
                 type="email"
                 value={emailInput}
@@ -142,23 +142,25 @@ export default function CreateRoomPage() {
                 placeholder="Email address"
               />
             </div>
-            <Select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              options={ROLES}
-              className="w-32 shrink-0"
-            />
-            <Button
-              type="button"
-              size="md"
-              variant="secondary"
-              onClick={lookupEmail}
-              disabled={lookingUp || !emailInput.trim()}
-              loading={lookingUp}
-              className="shrink-0"
-            >
-              Add
-            </Button>
+            <div className="flex gap-2 sm:shrink-0">
+              <Select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                options={ROLES}
+                className="flex-1 sm:w-32"
+              />
+              <Button
+                type="button"
+                size="md"
+                variant="secondary"
+                onClick={lookupEmail}
+                disabled={lookingUp || !emailInput.trim()}
+                loading={lookingUp}
+                className="shrink-0"
+              >
+                Add
+              </Button>
+            </div>
           </div>
 
           {lookupError && (
@@ -170,7 +172,7 @@ export default function CreateRoomPage() {
               {participants.map((p) => (
                 <div
                   key={p.userId}
-                  className="flex items-center justify-between rounded-xl border border-border px-4 py-3"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-border px-4 py-3 gap-2 sm:gap-0"
                 >
                   <div className="min-w-0">
                     <span className="text-sm font-medium text-text">{p.name}</span>
@@ -204,7 +206,7 @@ export default function CreateRoomPage() {
           <p className="text-sm text-error" role="alert">{submitError}</p>
         )}
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
           <Button type="submit" loading={submitting} disabled={!name || !propertyId}>
             Create room
           </Button>

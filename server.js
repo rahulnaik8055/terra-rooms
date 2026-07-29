@@ -3,11 +3,20 @@ const { Server } = require("socket.io");
 const Database = require("better-sqlite3");
 const jwt = require("jsonwebtoken");
 const { parse } = require("url");
+const path = require("path");
+const { config } = require("dotenv");
+
+config({ path: path.join(__dirname, ".env") });
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-change-in-production";
 const PORT = parseInt(process.env.PORT || "3000", 10);
 
-const db = new Database("./dev.db");
+const dbUrl = process.env.DATABASE_URL ?? "file:./dev.db";
+let dbPath = dbUrl.replace(/^file:(?:\/\/)?/, "");
+if (!path.isAbsolute(dbPath)) {
+  dbPath = path.join(__dirname, dbPath);
+}
+const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
 
 function verifyToken(token) {

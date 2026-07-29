@@ -35,26 +35,26 @@ export default function DashboardPage() {
   if (loading || !user) return null;
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-text">Dashboard</h1>
-          <p className="mt-1 text-sm text-text-secondary">Welcome, {user.name}.</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text">Dashboard</h1>
+          <p className="mt-0.5 sm:mt-1 text-sm text-text-secondary">Welcome, {user.name}.</p>
         </div>
         {user.role === "BUYER" && (
-          <Link href="/rooms/create">
-            <Button>Create room</Button>
+          <Link href="/rooms/create" className="sm:self-auto">
+            <Button className="w-full sm:w-auto">Create room</Button>
           </Link>
         )}
       </div>
 
-      <section className="mt-10">
+      <section className="mt-6 sm:mt-10">
         <h2 className="text-sm font-semibold text-text">Your rooms</h2>
 
         {fetching ? (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-3 sm:mt-4 grid gap-3 sm:gap-4 sm:grid-cols-2">
             {[1, 2].map((i) => (
-              <Card key={i} className="p-6">
+              <Card key={i} className="p-5 sm:p-6">
                 <Skeleton className="mb-3 h-4 w-3/5" />
                 <Skeleton className="mb-2 h-3 w-2/5" />
                 <div className="mt-4 flex gap-4">
@@ -65,12 +65,12 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : rooms.length === 0 ? (
-          <div className="mt-4">
+          <div className="mt-3 sm:mt-4">
             <EmptyState
               title="No rooms yet"
               description={user.role === "BUYER" ? "Create your first room to start collaborating." : "You haven't been added to any rooms."}
               icon={
-                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <svg width="36" height="36" viewBox="0 0 40 40" fill="none" className="sm:w-10 sm:h-10">
                   <rect x="8" y="16" width="24" height="16" rx="3" stroke="currentColor" strokeWidth="2" />
                   <path d="M20 6L8 16H32L20 6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
                 </svg>
@@ -79,12 +79,12 @@ export default function DashboardPage() {
             />
           </div>
         ) : (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-3 sm:mt-4 grid gap-3 sm:gap-4 sm:grid-cols-2">
             {rooms.map((room) => (
               <Link key={room.id} href={`/rooms/${room.id}`}>
-                <Card hover className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="min-w-0">
+                <Card hover className="p-5 sm:p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
                       <h3 className="truncate text-sm font-semibold text-text">{room.name}</h3>
                       <p className="mt-0.5 truncate text-xs text-text-secondary">
                         {room.property.address}, {room.property.city}
@@ -94,7 +94,7 @@ export default function DashboardPage() {
                       {room.status.replace(/_/g, " ")}
                     </Badge>
                   </div>
-                  <div className="mt-4 flex items-center gap-4 text-xs text-text-secondary">
+                  <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-secondary">
                     <span>{room.participants.length} participant{room.participants.length !== 1 ? "s" : ""}</span>
                     <span>{room.activityCount} activit{room.activityCount === 1 ? "y" : "ies"}</span>
                     <RoleBadge role={room.myRole} />

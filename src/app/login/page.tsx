@@ -26,7 +26,6 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-
     try {
       await login({ email, password });
       router.push("/dashboard");
@@ -40,7 +39,6 @@ export default function LoginPage() {
   async function handleDemoLogin(email: string) {
     setError(null);
     setSubmitting(true);
-
     try {
       await login({ email, password: "password123" });
       router.push("/dashboard");
@@ -52,23 +50,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg px-6">
+    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg px-4 sm:px-6">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[16px] bg-primary-light">
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <div className="mb-6 sm:mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-[16px] bg-primary-light">
+            <svg width="20" height="20" viewBox="0 0 22 22" fill="none" className="sm:w-[22px] sm:h-[22px]">
               <rect x="3" y="8" width="16" height="11" rx="2" stroke="#7C5CFF" strokeWidth="1.5" />
               <path d="M11 3L3 8H19L11 3Z" fill="#7C5CFF" fillOpacity="0.1" stroke="#7C5CFF" strokeWidth="1.5" strokeLinejoin="round" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-text">Welcome back</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-text">Welcome back</h1>
           <p className="mt-1 text-sm text-text-secondary">
             Sign in to your account to continue.
           </p>
         </div>
 
-        <Card className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <Card className="p-6 sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             <Input
               label="Email"
               type="email"
@@ -98,7 +96,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6">
+          <div className="mt-5 sm:mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-border" />
@@ -110,13 +108,13 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-3 sm:mt-4 grid grid-cols-2 gap-2">
               {DEMO_CREDENTIALS.map((creds) => (
                 <button
                   key={creds.email}
                   onClick={() => handleDemoLogin(creds.email)}
                   disabled={submitting}
-                  className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition hover:border-primary hover:bg-primary-light hover:text-primary disabled:opacity-40"
+                  className="h-9 sm:h-10 rounded-xl border border-border bg-surface px-3 text-xs sm:text-sm font-medium text-text-secondary transition hover:border-primary hover:bg-primary-light hover:text-primary disabled:opacity-40"
                 >
                   {creds.label}
                 </button>
@@ -125,7 +123,7 @@ export default function LoginPage() {
           </div>
         </Card>
 
-        <p className="mt-6 text-center text-sm text-text-secondary">
+        <p className="mt-5 sm:mt-6 text-center text-sm text-text-secondary">
           Don&apos;t have an account?{" "}
           <Link href="/register" className="font-medium text-primary hover:text-primary-hover">
             Register
