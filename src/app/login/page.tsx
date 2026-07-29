@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { useAuthContext } from "@/providers/AuthProvider";
 
+const DEMO_CREDENTIALS = [
+  { label: "Buyer", email: "buyer@test.com" },
+  { label: "Seller", email: "seller@test.com" },
+  { label: "Bank", email: "bank@test.com" },
+  { label: "Lawyer", email: "lawyer@test.com" },
+  { label: "Broker", email: "broker@test.com" },
+] as const;
+
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuthContext();
@@ -28,8 +36,24 @@ export default function LoginPage() {
     }
   }
 
+  async function handleDemoLogin(creds: { label: string; email: string }) {
+    setError(null);
+    setSubmitting(true);
+    setEmail(creds.email);
+    setPassword("password123");
+
+    try {
+      await login({ email: creds.email, password: "password123" });
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Demo login failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-white px-4">
+    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-gradient-to-b from-zinc-50 to-white px-4">
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
           Sign in
@@ -84,6 +108,30 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <div className="mt-8">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-zinc-200" />
+            </div>
+            <div className="relative flex justify-center text-xs text-zinc-400">
+              <span className="bg-gradient-to-b from-zinc-50 to-white px-2">Quick demo access</span>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {DEMO_CREDENTIALS.map((creds) => (
+              <button
+                key={creds.email}
+                onClick={() => handleDemoLogin(creds)}
+                disabled={submitting}
+                className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 transition hover:border-zinc-300 hover:bg-white hover:text-zinc-900 disabled:opacity-50"
+              >
+                {creds.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <p className="mt-6 text-center text-sm text-zinc-500">
           Don&apos;t have an account?{" "}
           <Link href="/register" className="font-medium text-zinc-900 hover:underline">
@@ -91,12 +139,10 @@ export default function LoginPage() {
           </Link>
         </p>
 
-        <div className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
-          <p className="text-xs font-medium text-zinc-600">Demo accounts</p>
+        <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+          <p className="text-xs font-medium text-zinc-600">All demo accounts</p>
           <p className="mt-1 text-xs text-zinc-400">
-            buyer@test.com / seller@test.com / bank@test.com / lawyer@test.com / broker@test.com
-            <br />
-            Password: password123
+            Password: <span className="font-mono">password123</span>
           </p>
         </div>
       </div>

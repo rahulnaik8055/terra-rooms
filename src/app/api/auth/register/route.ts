@@ -6,6 +6,8 @@ import { cookies } from "next/headers";
 
 const VALID_ROLES = ["BUYER", "SELLER", "BANK", "LAWYER", "BROKER"] as const;
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -14,6 +16,27 @@ export async function POST(request: NextRequest) {
     if (!email || !password || !name || !role) {
       return NextResponse.json(
         { error: "email, password, name, and role are required" },
+        { status: 400 }
+      );
+    }
+
+    if (typeof email !== "string" || !EMAIL_RE.test(email)) {
+      return NextResponse.json(
+        { error: "A valid email address is required" },
+        { status: 400 }
+      );
+    }
+
+    if (typeof password !== "string" || password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters" },
+        { status: 400 }
+      );
+    }
+
+    if (typeof name !== "string" || name.trim().length < 1) {
+      return NextResponse.json(
+        { error: "Name is required" },
         { status: 400 }
       );
     }
@@ -42,7 +65,7 @@ export async function POST(request: NextRequest) {
       data: {
         email,
         passwordHash,
-        name,
+        name: name.trim(),
         role,
       },
     });

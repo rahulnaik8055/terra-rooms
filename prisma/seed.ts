@@ -262,7 +262,7 @@ async function main() {
 
   const demoRoom = await prisma.room.create({
     data: {
-      name: "Demo Deal",
+      name: "Demo Deal - Sunshine Apartments",
       propertyId: property1.id,
       status: "DRAFT",
       createdByUserId: broker.id,
@@ -279,19 +279,63 @@ async function main() {
     ],
   });
 
+  const now = new Date();
+
   await prisma.activityLog.create({
     data: {
       roomId: demoRoom.id,
       userId: broker.id,
       action: "ROOM_CREATED",
-      details: { message: "Demo Deal room created with all participants" },
+      details: { message: "Demo Deal room created by broker Rajesh Kumar with all 5 participants" },
+      timestamp: new Date(now.getTime() - 86400000 * 3),
+    },
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      roomId: demoRoom.id,
+      userId: lawyer.id,
+      action: "NOTE",
+      details: { message: "Started reviewing the title chain. Initial findings look positive — need to verify the 2008 probate order." },
+      timestamp: new Date(now.getTime() - 86400000 * 2),
+    },
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      roomId: demoRoom.id,
+      userId: bank.id,
+      action: "NOTE",
+      details: { message: "Verified encumbrance certificate. Existing SBI loan of Rs. 62L needs NOC before closure. No other charges." },
+      timestamp: new Date(now.getTime() - 86400000 * 1),
+    },
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      roomId: demoRoom.id,
+      userId: buyer.id,
+      action: "NOTE",
+      details: { message: "Reviewed tax records. Property taxes are paid up to March 2026. No arrears." },
+      timestamp: new Date(now.getTime() - 43200000),
+    },
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      roomId: demoRoom.id,
+      userId: broker.id,
+      action: "NOTE",
+      details: { message: "All parties confirmed. Ready to move to In Review once everyone has completed their initial checks." },
+      timestamp: new Date(now.getTime() - 21600000),
     },
   });
 
   console.log("Seed completed successfully");
-  console.log('  Users: 5 created (all passwords: "password123")');
-  console.log("  Properties: 2 created (Mumbai, Bangalore)");
-  console.log('  Room: "Demo Deal" created with all 5 participants');
+  console.log('  Users:       5 created (all passwords: "password123")');
+  console.log("  Properties:  2 created (Mumbai apartment, Bangalore industrial plot)");
+  console.log('  Room:        "Demo Deal - Sunshine Apartments" (DRAFT)');
+  console.log("  Activities:  5 seed entries (room creation, lawyer review, bank check, buyer review, broker summary)");
 }
 
 main()

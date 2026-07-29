@@ -37,9 +37,16 @@ export async function POST(
     const body = await request.json();
     const { action, details } = body;
 
-    if (!action) {
+    if (!action || typeof action !== "string" || action.trim().length === 0) {
       return NextResponse.json(
-        { error: "action is required" },
+        { error: "action must be a non-empty string" },
+        { status: 400 }
+      );
+    }
+
+    if (details !== undefined && (typeof details !== "object" || details === null || Array.isArray(details))) {
+      return NextResponse.json(
+        { error: "details must be a plain object" },
         { status: 400 }
       );
     }

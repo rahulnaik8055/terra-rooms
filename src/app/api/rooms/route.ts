@@ -30,6 +30,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (typeof name !== "string" || name.trim().length < 1) {
+      return NextResponse.json(
+        { error: "name must be a non-empty string" },
+        { status: 400 }
+      );
+    }
+
+    if (typeof propertyId !== "string" || propertyId.length < 1) {
+      return NextResponse.json(
+        { error: "propertyId must be a valid property ID" },
+        { status: 400 }
+      );
+    }
+
     if (!Array.isArray(participantIds)) {
       return NextResponse.json(
         { error: "participantIds must be an array" },
