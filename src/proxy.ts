@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET ?? "dev-secret-change-in-production"
-);
+import { verifyToken } from "@/lib/auth";
 
 const protectedPaths = ["/api/rooms", "/api/properties"];
 
@@ -21,10 +17,10 @@ export async function proxy(request: NextRequest) {
     }
 
     try {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
+      const payload = verifyToken(token);
       const requestHeaders = new Headers(request.headers);
-      requestHeaders.set("x-user-id", payload.sub as string);
-      requestHeaders.set("x-user-role", payload.role as string);
+      requestHeaders.set("x-user-id", payload.sub);
+      requestHeaders.set("x-user-role", payload.role);
 
       return NextResponse.next({
         request: { headers: requestHeaders },
@@ -36,10 +32,10 @@ export async function proxy(request: NextRequest) {
 
   if (token) {
     try {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
+      const payload = verifyToken(token);
       const requestHeaders = new Headers(request.headers);
-      requestHeaders.set("x-user-id", payload.sub as string);
-      requestHeaders.set("x-user-role", payload.role as string);
+      requestHeaders.set("x-user-id", payload.sub);
+      requestHeaders.set("x-user-role", payload.role);
 
       return NextResponse.next({
         request: { headers: requestHeaders },

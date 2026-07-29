@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthContext } from "@/providers/AuthProvider";
 import { Button, Input, Select, Card, RoleBadge } from "@/components/ui";
 
@@ -25,13 +25,16 @@ export default function CreateRoomPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [participants, setParticipants] = useState<ParticipantEntry[]>([]);
   const [emailInput, setEmailInput] = useState("");
-  const [lookingUp, setLookingUp] = useState(false);
-  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<UserResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [creating, setCreating] = useState<{ email: string; name: string; password: string; role: string } | null>(null);
   const [creatingUser, setCreatingUser] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -39,35 +42,57 @@ export default function CreateRoomPage() {
     fetch("/api/properties").then((r) => r.json()).then(setProperties).catch(() => {});
   }, [user, loading, router]);
 
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
     const trimmed = emailInput.trim();
-    if (!trimmed) return;
-    setLookingUp(true);
-    setLookupError(null);
-    try {
-      const res = await fetch(`/api/users?email=${encodeURIComponent(trimmed)}`);
-      if (res.ok) {
-        const found: UserResult = await res.json();
-        if (participants.some((p) => p.userId === found.id)) {
-          setLookupError(`${found.name} is already added`);
-          return;
+    if (!trimmed) { setSearchResults(null); setShowDropdown(false); setSearching(false); return; }
+
+    searchTimer.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`/api/users?search=${encodeURIComponent(trimmed)}`);
+        if (res.ok) {
+          const all: UserResult[] = await res.json();
+          const addedIds = new Set(participants.map((p) => p.userId));
+          setSearchResults(all.filter((u) => !addedIds.has(u.id)));
+          setShowDropdown(true);
         }
-        setParticipants((prev) => [...prev, { userId: found.id, email: found.email, name: found.name, role: found.role }]);
-        setEmailInput("");
-      } else {
-        setCreating({ email: trimmed, name: trimmed.split("@")[0], password: "", role: "" });
-        setEmailInput("");
+      } catch {
+        setSearchResults(null);
+      } finally {
+        setSearching(false);
       }
-    } catch {
-      setLookupError("Failed to look up user");
-    } finally {
-      setLookingUp(false);
+    }, 200);
+
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [emailInput, participants]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
     }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function selectUser(found: UserResult) {
+    setParticipants((prev) => [...prev, { userId: found.id, email: found.email, name: found.name, role: found.role }]);
+    setEmailInput("");
+    setSearchResults(null);
+    setShowDropdown(false);
   }
 
-  async function handleCreateUser(e: React.FormEvent) {
-    e.preventDefault();
+  function showCreateForm() {
+    const trimmed = emailInput.trim();
+    if (!trimmed) return;
+    setCreating({ email: trimmed, name: trimmed.split("@")[0], password: "", role: "" });
+    setShowDropdown(false);
+    setEmailInput("");
+  }
+
+  async function handleCreateUser() {
     if (!creating || !creating.name.trim() || !creating.password.trim() || !creating.role) return;
     setCreatingUser(true);
     setCreateError(null);
@@ -121,6 +146,9 @@ export default function CreateRoomPage() {
     }
   }
 
+  const addedIds = new Set(participants.map((p) => p.userId));
+  const filteredResults = searchResults?.filter((u) => !addedIds.has(u.id));
+
   if (loading || !user || user.role !== "BUYER") return null;
 
   return (
@@ -152,39 +180,66 @@ export default function CreateRoomPage() {
         <Card className="p-6 sm:p-8">
           <h2 className="text-sm font-semibold text-text">Participants</h2>
           <p className="mt-0.5 text-xs text-text-secondary">
-            Enter an email to add participants. You will be added automatically as Buyer.
+            Start typing an email to search. Already-added users are hidden.
           </p>
 
-          <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
-            <div className="flex-1 min-w-0">
-              <Input
-                type="email"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                placeholder="Email address"
-              />
+          <div className="mt-4 relative" ref={dropdownRef}>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
+              <div className="flex-1 min-w-0 relative">
+                <Input
+                  type="text"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  onFocus={() => { if (searchResults && searchResults.length > 0) setShowDropdown(true); }}
+                  placeholder="Search by email..."
+                />
+                {searching && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </div>
+                )}
+              </div>
             </div>
-            <Button
-              type="button"
-              size="md"
-              variant="secondary"
-              onClick={handleAdd}
-              disabled={lookingUp || !emailInput.trim()}
-              loading={lookingUp}
-              className="shrink-0"
-            >
-              Add
-            </Button>
-          </div>
 
-          {lookupError && (
-            <p className="mt-2 text-xs text-error">{lookupError}</p>
-          )}
+            {showDropdown && filteredResults && filteredResults.length > 0 && (
+              <div className="absolute z-20 mt-1 w-full rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
+                {filteredResults.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => selectUser(u)}
+                    className="flex w-full items-center justify-between px-4 py-2.5 text-left transition hover:bg-primary-light/20"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span className="text-sm font-medium text-text">{u.name}</span>
+                      <span className="ml-2 text-xs text-text-secondary">{u.email}</span>
+                    </div>
+                    <RoleBadge role={u.role} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {showDropdown && filteredResults && filteredResults.length === 0 && emailInput.trim() && (
+              <div className="absolute z-20 mt-1 w-full rounded-xl border border-border bg-surface shadow-lg">
+                <button
+                  type="button"
+                  onClick={showCreateForm}
+                  className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-text-secondary transition hover:bg-primary-light/20"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  No user found — create &quot;{emailInput.trim()}&quot;
+                </button>
+              </div>
+            )}
+          </div>
 
           {creating && (
             <div className="mt-3 rounded-xl border border-primary/30 bg-primary-light/20 px-4 sm:px-5 py-4">
               <p className="text-sm font-medium text-text">
-                User &quot;{creating.email}&quot; not found — create one
+                Create user &quot;{creating.email}&quot;
               </p>
               <div className="mt-3 flex flex-col sm:flex-row gap-3">
                 <Input

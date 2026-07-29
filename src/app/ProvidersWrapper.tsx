@@ -6,6 +6,12 @@ import { useAuthContext, AuthProvider } from "@/providers/AuthProvider";
 import { SocketProvider } from "@/providers/SocketProvider";
 import { Button, Badge } from "@/components/ui";
 
+const SOCIAL_LINKS = [
+  { label: "LinkedIn", href: "https://linkedin.com/in/rahulnayak17" },
+  { label: "GitHub", href: "https://github.com/rahulnaik8055" },
+  { label: "Portfolio", href: "https://www.rahulnaik.site" },
+];
+
 function NavBar() {
   const { user, loading, logout } = useAuthContext();
   const pathname = usePathname();
@@ -45,6 +51,28 @@ function NavBar() {
   );
 }
 
+function Footer() {
+  return (
+    <footer className="border-t border-border bg-surface py-4 sm:py-5">
+      <div className="mx-auto flex max-w-6xl items-center justify-center gap-4 px-4 text-xs text-text-secondary sm:px-6">
+        <span>Built by Rahul Nayak</span>
+        <span className="text-border">|</span>
+        {SOCIAL_LINKS.map((link) => (
+          <a
+            key={link.label}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition hover:text-primary"
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
+    </footer>
+  );
+}
+
 function Inner({ children }: { children: React.ReactNode }) {
   const { user } = useAuthContext();
 
@@ -52,6 +80,7 @@ function Inner({ children }: { children: React.ReactNode }) {
     <SocketProvider user={user}>
       <NavBar />
       <main className="flex-1">{children}</main>
+      <Footer />
     </SocketProvider>
   );
 }
