@@ -111,18 +111,9 @@ async function main() {
           return;
         }
 
-        const id = crypto.randomUUID();
-        const timestamp = new Date().toISOString();
+        socket.to(roomId).emit("activity:new", { roomId, action, details, userId });
 
-        db.prepare(
-          "INSERT INTO ActivityLog (id, roomId, userId, action, details, timestamp) VALUES (?, ?, ?, ?, ?, ?)"
-        ).run(id, roomId, userId, action, JSON.stringify(details ?? {}), timestamp);
-
-        const newActivity = { id, action, details, timestamp, userId };
-
-        socket.to(roomId).emit("activity:new", { roomId, activity: newActivity });
-
-        if (ack) ack({ success: true, activity: newActivity });
+        if (ack) ack({ success: true });
       } catch (err) {
         console.error("room:activity error:", err);
         if (ack) ack({ error: "Internal error" });

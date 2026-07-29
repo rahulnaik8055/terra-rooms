@@ -1,12 +1,17 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthContext } from "@/providers/AuthProvider";
 import { useSocket } from "@/hooks/useSocket";
 import { roleCanSetStatus } from "@/lib/permissions";
 import type { Role, RoomStatus } from "@/lib/permissions";
-import { Button, Badge, Card, RoleBadge, Spinner, StatusBadge } from "@/components/ui";
+import { Button, Badge, Card, RoleBadge, Spinner } from "@/components/ui";
+import { PropertyOverview } from "@/components/property/PropertyOverview";
+import { OwnershipHistory } from "@/components/property/OwnershipHistory";
+import { EncumbranceStatus } from "@/components/property/EncumbranceStatus";
+import { TaxRecords } from "@/components/property/TaxRecords";
+import { TitleChain } from "@/components/property/TitleChain";
 
 const STEPS: RoomStatus[] = ["DRAFT", "IN_REVIEW", "LAWYER_VERIFIED", "BANK_APPROVED", "CLOSED"];
 
@@ -65,54 +70,37 @@ interface RoomData {
   participants: Participant[]; activityLogs: ActivityLog[];
 }
 
-function PropertySectionCard({
-  label, detail, status, collapsed, onToggle,
-}: {
-  label: string; detail: unknown; status: string; collapsed: boolean; onToggle: () => void;
-}) {
-  return (
-    <Card className="overflow-hidden !p-0">
-      <button type="button" onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 text-left transition hover:bg-primary-light/30"
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-medium text-text truncate">{label}</span>
-          <Badge variant={status === "verified" ? "success" : "warning"} className="shrink-0">
-            {status}
-          </Badge>
-        </div>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
-          className={`shrink-0 text-text-secondary transition duration-200 ${collapsed ? "" : "rotate-180"}`}
-        >
-          <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-      {!collapsed && (
-        <div className="border-t border-border px-4 sm:px-5 py-3 sm:py-4">
-          {detail != null ? (
-            <pre className="max-h-96 overflow-auto text-xs leading-relaxed text-text-secondary">
-              {JSON.stringify(detail, null, 2)}
-            </pre>
-          ) : (
-            <p className="text-xs italic text-text-secondary/60">No data available</p>
-          )}
-        </div>
-      )}
-    </Card>
-  );
+function parseSectionData(data: unknown): unknown {
+  if (data == null) return null;
+  if (typeof data === "string") {
+    try { return JSON.parse(data); } catch { return data; }
+  }
+  return data;
 }
 
-function RestrictedSectionCard({ label }: { label: string }) {
-  return (
-    <div className="flex items-center gap-2.5 rounded-[20px] border border-dashed border-border bg-surface/50 px-4 sm:px-5 py-3 sm:py-3.5">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0 text-text-secondary/30">
-        <path d="M7 3V7M7 10H7.01M3 1H11C12.1046 1 13 1.89543 13 3V11C13 12.1046 12.1046 13 11 13H3C1.89543 13 1 12.1046 1 11V3C1 1.89543 1.89543 1 3 1Z"
-          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      <span className="text-sm text-text-secondary/60">{label}</span>
-      <Badge className="ml-auto">Restricted</Badge>
-    </div>
-  );
+function getSectionStatus(property: Record<string, unknown>, key: string): "verified" | "pending" | "restricted" {
+  if (!(key in property)) return "restricted";
+  const sectionStatus = property.sectionStatus as Record<string, string> | undefined;
+  const st = sectionStatus?.[key];
+  if (st === "pending") return "pending";
+  if (st === "verified") return "verified";
+  return "verified";
+}
+
+function renderSection(key: string, property: Record<string, unknown>) {
+  const data = parseSectionData(property[key]);
+  const status = getSectionStatus(property, key);
+
+  const components: Record<string, React.FC<{ data: unknown; status: "verified" | "pending" | "restricted" }>> = {
+    ownershipHistory: OwnershipHistory,
+    encumbranceStatus: EncumbranceStatus,
+    taxRecords: TaxRecords,
+    titleChain: TitleChain,
+  };
+
+  const Component = components[key];
+  if (!Component) return null;
+  return <Component key={key} data={data} status={status} />;
 }
 
 export default function RoomDetailPage() {
@@ -125,24 +113,9 @@ export default function RoomDetailPage() {
   const [room, setRoom] = useState<RoomData | null>(null);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [activityInput, setActivityInput] = useState("");
   const [postingActivity, setPostingActivity] = useState(false);
   const [advancingStatus, setAdvancingStatus] = useState(false);
-
-  const toggleSection = (key: string) => {
-    setCollapsed((prev) => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
-  };
-
-  const sectionEntries = useMemo(() => {
-    if (!room) return [];
-    return SECTION_CONFIG.filter((c) => c.key in room.property).map((c) => ({ ...c, restricted: false }));
-  }, [room]);
-
-  const restrictedSections = useMemo(() => {
-    if (!room) return [];
-    return SECTION_CONFIG.filter((c) => !(c.key in room.property)).map((c) => ({ ...c, restricted: true }));
-  }, [room]);
 
   const fetchRoom = useCallback(async () => {
     try {
@@ -241,28 +214,11 @@ export default function RoomDetailPage() {
   }
 
   if (error && !room) {
-    return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg px-4">
-        <div className="max-w-sm text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-error/10">
-            <span className="text-lg text-error">!</span>
-          </div>
-          <p className="mt-4 text-sm font-medium text-text">Could not load room</p>
-          <p className="mt-1 text-xs text-text-secondary">{error}</p>
-          <Button className="mt-6 w-full sm:w-auto" onClick={() => router.push("/dashboard")}>
-            Back to dashboard
-          </Button>
-        </div>
-      </div>
-    );
+    return <ErrorState message={error} onBack={() => router.push("/dashboard")} />;
   }
 
   if (!room) {
-    return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg px-4">
-        <ErrorState message="Room not found" onBack={() => router.push("/dashboard")} />
-      </div>
-    );
+    return <ErrorState message="Room not found" onBack={() => router.push("/dashboard")} />;
   }
 
   return (
@@ -291,33 +247,9 @@ export default function RoomDetailPage() {
           <div className="space-y-6 sm:space-y-8 lg:col-span-2 min-w-0">
             <section>
               <h2 className="mb-3 sm:mb-4 text-sm font-semibold text-text">Property</h2>
-              <div className="space-y-3">
-                <Card className="!p-0 overflow-hidden">
-                  <div className="border-b border-border px-4 sm:px-5 py-3 sm:py-3.5">
-                    <p className="text-sm font-medium text-text break-words">
-                      {(room.property.address as string) ?? "—"}
-                    </p>
-                    <p className="mt-0.5 text-xs text-text-secondary break-words">
-                      {[room.property.city as string, room.property.state as string].filter(Boolean).join(", ")}
-                      {(room.property.surveyNumber as string) ? ` · Survey ${room.property.surveyNumber}` : ""}
-                    </p>
-                  </div>
-                  <div className="px-4 sm:px-5 py-3">
-                    <span className="text-xs text-text-secondary">Status: </span>
-                    <StatusBadge status={room.status} />
-                  </div>
-                </Card>
-
-                {sectionEntries.map((section) => (
-                  <PropertySectionCard key={section.key} label={section.label}
-                    detail={room.property[section.key]}
-                    status={(room.property.sectionStatus as Record<string, string> | undefined)?.[section.key] ?? "verified"}
-                    collapsed={collapsed.has(section.key)} onToggle={() => toggleSection(section.key)} />
-                ))}
-
-                {restrictedSections.map((section) => (
-                  <RestrictedSectionCard key={section.key} label={section.label} />
-                ))}
+              <div className="space-y-4">
+                <PropertyOverview data={room.property} roomStatus={room.status} />
+                {SECTION_CONFIG.map((section) => renderSection(section.key, room.property))}
               </div>
             </section>
 
@@ -350,9 +282,18 @@ export default function RoomDetailPage() {
                       </div>
                       {log.details && (
                         <div className="border-t border-border px-4 sm:px-5 py-3">
-                          <p className="text-xs text-text-secondary break-words">
-                            {log.details.message as string ?? JSON.stringify(log.details)}
-                          </p>
+                          {log.action === "STATUS_CHANGED" ? (
+                            <p className="text-xs text-text-secondary">
+                              Status changed from{" "}
+                              <span className="font-medium text-text">{String((log.details as Record<string, unknown>).from)}</span>
+                              {" "}to{" "}
+                              <span className="font-medium text-text">{String((log.details as Record<string, unknown>).to)}</span>
+                            </p>
+                          ) : (
+                            <p className="text-xs text-text-secondary break-words">
+                              {(log.details as Record<string, unknown>).message as string ?? ""}
+                            </p>
+                          )}
                         </div>
                       )}
                     </Card>
@@ -454,13 +395,15 @@ export default function RoomDetailPage() {
 
 function ErrorState({ message, onBack }: { message: string; onBack: () => void }) {
   return (
-    <div className="max-w-sm text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-error/10">
-        <span className="text-lg text-error">!</span>
+    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg px-4">
+      <div className="max-w-sm text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-error/10">
+          <span className="text-lg text-error">!</span>
+        </div>
+        <p className="mt-4 text-sm font-medium text-text">Could not load room</p>
+        <p className="mt-1 text-xs text-text-secondary break-words">{message}</p>
+        <Button className="mt-6 w-full sm:w-auto" onClick={onBack}>Back to dashboard</Button>
       </div>
-      <p className="mt-4 text-sm font-medium text-text">Could not load room</p>
-      <p className="mt-1 text-xs text-text-secondary break-words">{message}</p>
-      <Button className="mt-6 w-full sm:w-auto" onClick={onBack}>Back to dashboard</Button>
     </div>
   );
 }
