@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { useAuthContext } from "@/providers/AuthProvider";
+import { Button, Input, Card } from "@/components/ui";
 
 const DEMO_CREDENTIALS = [
   { label: "Buyer", email: "buyer@test.com" },
@@ -36,14 +37,12 @@ export default function LoginPage() {
     }
   }
 
-  async function handleDemoLogin(creds: { label: string; email: string }) {
+  async function handleDemoLogin(email: string) {
     setError(null);
     setSubmitting(true);
-    setEmail(creds.email);
-    setPassword("password123");
 
     try {
-      await login({ email: creds.email, password: "password123" });
+      await login({ email, password: "password123" });
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Demo login failed");
@@ -53,98 +52,85 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-gradient-to-b from-zinc-50 to-white px-4">
+    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-bg px-6">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-          Sign in
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Enter your credentials to continue.
-        </p>
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[16px] bg-primary-light">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <rect x="3" y="8" width="16" height="11" rx="2" stroke="#7C5CFF" strokeWidth="1.5" />
+              <path d="M11 3L3 8H19L11 3Z" fill="#7C5CFF" fillOpacity="0.1" stroke="#7C5CFF" strokeWidth="1.5" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-text">Welcome back</h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            Sign in to your account to continue.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-zinc-700">
-              Email
-            </label>
-            <input
-              id="email"
+        <Card className="p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <Input
+              label="Email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1.5 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               placeholder="you@example.com"
             />
-          </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-zinc-700">
-              Password
-            </label>
-            <input
-              id="password"
+            <Input
+              label="Password"
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1.5 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
               placeholder="Enter your password"
             />
-          </div>
 
-          {error && (
-            <p className="text-sm text-red-600" role="alert">
-              {error}
-            </p>
-          )}
+            {error && (
+              <p className="text-sm text-error" role="alert">
+                {error}
+              </p>
+            )}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {submitting ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
+            <Button type="submit" loading={submitting} className="w-full">
+              Sign in
+            </Button>
+          </form>
 
-        <div className="mt-8">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-zinc-200" />
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-surface px-2 text-xs text-text-secondary">
+                  Quick demo access
+                </span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-xs text-zinc-400">
-              <span className="bg-gradient-to-b from-zinc-50 to-white px-2">Quick demo access</span>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {DEMO_CREDENTIALS.map((creds) => (
+                <button
+                  key={creds.email}
+                  onClick={() => handleDemoLogin(creds.email)}
+                  disabled={submitting}
+                  className="h-10 rounded-xl border border-border bg-surface px-3 text-sm font-medium text-text-secondary transition hover:border-primary hover:bg-primary-light hover:text-primary disabled:opacity-40"
+                >
+                  {creds.label}
+                </button>
+              ))}
             </div>
           </div>
+        </Card>
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {DEMO_CREDENTIALS.map((creds) => (
-              <button
-                key={creds.email}
-                onClick={() => handleDemoLogin(creds)}
-                disabled={submitting}
-                className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 transition hover:border-zinc-300 hover:bg-white hover:text-zinc-900 disabled:opacity-50"
-              >
-                {creds.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <p className="mt-6 text-center text-sm text-zinc-500">
+        <p className="mt-6 text-center text-sm text-text-secondary">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-medium text-zinc-900 hover:underline">
+          <Link href="/register" className="font-medium text-primary hover:text-primary-hover">
             Register
           </Link>
         </p>
-
-        <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
-          <p className="text-xs font-medium text-zinc-600">All demo accounts</p>
-          <p className="mt-1 text-xs text-zinc-400">
-            Password: <span className="font-mono">password123</span>
-          </p>
-        </div>
       </div>
     </div>
   );

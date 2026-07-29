@@ -3,28 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { useAuthContext } from "@/providers/AuthProvider";
-
-interface Property {
-  id: string;
-  address: string;
-  city: string;
-  state: string;
-  surveyNumber: string;
-}
-
-interface UserResult {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-}
-
-interface ParticipantEntry {
-  userId: string;
-  email: string;
-  name: string;
-  role: string;
-}
+import { Button, Input, Select, Card, RoleBadge } from "@/components/ui";
 
 const ROLES = [
   { value: "BUYER", label: "Buyer" },
@@ -33,6 +12,10 @@ const ROLES = [
   { value: "LAWYER", label: "Lawyer" },
   { value: "BROKER", label: "Broker" },
 ] as const;
+
+interface Property { id: string; address: string; city: string; state: string; surveyNumber: string; }
+interface UserResult { id: string; email: string; name: string; role: string; }
+interface ParticipantEntry { userId: string; email: string; name: string; role: string; }
 
 export default function CreateRoomPage() {
   const router = useRouter();
@@ -50,14 +33,8 @@ export default function CreateRoomPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user || user.role !== "BUYER") {
-      router.push("/dashboard");
-      return;
-    }
-    fetch("/api/properties")
-      .then((r) => r.json())
-      .then(setProperties)
-      .catch(() => {});
+    if (!user || user.role !== "BUYER") { router.push("/dashboard"); return; }
+    fetch("/api/properties").then((r) => r.json()).then(setProperties).catch(() => {});
   }, [user, loading, router]);
 
   const lookupEmail = useCallback(async () => {
@@ -65,7 +42,6 @@ export default function CreateRoomPage() {
     if (!trimmed) return;
     setLookingUp(true);
     setLookupError(null);
-
     try {
       const res = await fetch(`/api/users?email=${encodeURIComponent(trimmed)}`);
       if (!res.ok) {
@@ -74,21 +50,11 @@ export default function CreateRoomPage() {
         return;
       }
       const found: UserResult = await res.json();
-
       if (participants.some((p) => p.userId === found.id)) {
         setLookupError(`${found.name} is already added`);
         return;
       }
-
-      setParticipants((prev) => [
-        ...prev,
-        {
-          userId: found.id,
-          email: found.email,
-          name: found.name,
-          role: selectedRole,
-        },
-      ]);
+      setParticipants((prev) => [...prev, { userId: found.id, email: found.email, name: found.name, role: selectedRole }]);
       setEmailInput("");
     } catch {
       setLookupError("Failed to look up user");
@@ -102,16 +68,13 @@ export default function CreateRoomPage() {
   }
 
   function updateParticipantRole(userId: string, role: string) {
-    setParticipants((prev) =>
-      prev.map((p) => (p.userId === userId ? { ...p, role } : p))
-    );
+    setParticipants((prev) => prev.map((p) => (p.userId === userId ? { ...p, role } : p)));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError(null);
     setSubmitting(true);
-
     try {
       const res = await fetch("/api/rooms", {
         method: "POST",
@@ -119,18 +82,13 @@ export default function CreateRoomPage() {
         body: JSON.stringify({
           name,
           propertyId,
-          participantIds: participants.map((p) => ({
-            userId: p.userId,
-            role: p.role,
-          })),
+          participantIds: participants.map((p) => ({ userId: p.userId, role: p.role })),
         }),
       });
-
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to create room");
       }
-
       const room = await res.json();
       router.push(`/rooms/${room.id}`);
     } catch (err) {
@@ -143,101 +101,68 @@ export default function CreateRoomPage() {
   if (loading || !user || user.role !== "BUYER") return null;
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-        Create room
-      </h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        Set up a new due diligence workspace.
-      </p>
+    <div className="mx-auto max-w-2xl px-6 py-10">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-text">Create room</h1>
+        <p className="mt-1 text-sm text-text-secondary">
+          Set up a new due diligence workspace.
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="mt-10 space-y-8">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-zinc-700">
-            Room name
-          </label>
-          <input
-            id="name"
-            type="text"
+        <Card className="space-y-6 p-8">
+          <Input label="Room name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Seaside Villa Acquisition" />
+
+          <Select
+            label="Property"
             required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mt-1.5 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-            placeholder="e.g. Seaside Villa Acquisition"
+            value={propertyId}
+            onChange={(e) => setPropertyId(e.target.value)}
+            placeholder={properties.length === 0 ? "Loading properties..." : "Select a property"}
+            options={properties.map((p) => ({
+              value: p.id,
+              label: `${p.address}, ${p.city}, ${p.state}`,
+            }))}
           />
-        </div>
+        </Card>
 
-        <div>
-          <label htmlFor="property" className="block text-sm font-medium text-zinc-700">
-            Property
-          </label>
-          {properties.length === 0 ? (
-            <p className="mt-1.5 text-sm text-zinc-400">Loading properties...</p>
-          ) : (
-            <select
-              id="property"
-              required
-              value={propertyId}
-              onChange={(e) => setPropertyId(e.target.value)}
-              className="mt-1.5 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-            >
-              <option value="">Select a property</option>
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.address}, {p.city}, {p.state}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700">
-            Participants
-          </label>
-          <p className="mt-0.5 text-xs text-zinc-400">
+        <Card className="p-8">
+          <h2 className="text-sm font-semibold text-text">Participants</h2>
+          <p className="mt-0.5 text-xs text-text-secondary">
             Search by email to add participants. You will be added automatically as Buyer.
           </p>
 
-          <div className="mt-3 flex items-end gap-2">
+          <div className="mt-4 flex items-end gap-2">
             <div className="flex-1">
-              <input
+              <Input
                 type="email"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    lookupEmail();
-                  }
-                }}
-                className="block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); lookupEmail(); } }}
                 placeholder="Email address"
               />
             </div>
-            <select
+            <Select
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
-            >
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-            <button
+              options={ROLES}
+              className="w-32 shrink-0"
+            />
+            <Button
               type="button"
+              size="md"
+              variant="secondary"
               onClick={lookupEmail}
               disabled={lookingUp || !emailInput.trim()}
-              className="rounded-lg bg-zinc-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+              loading={lookingUp}
+              className="shrink-0"
             >
-              {lookingUp ? "..." : "Add"}
-            </button>
+              Add
+            </Button>
           </div>
 
           {lookupError && (
-            <p className="mt-2 text-xs text-red-600">{lookupError}</p>
+            <p className="mt-2 text-xs text-error">{lookupError}</p>
           )}
 
           {participants.length > 0 && (
@@ -245,32 +170,26 @@ export default function CreateRoomPage() {
               {participants.map((p) => (
                 <div
                   key={p.userId}
-                  className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-2.5"
+                  className="flex items-center justify-between rounded-xl border border-border px-4 py-3"
                 >
-                  <div>
-                    <span className="text-sm font-medium text-zinc-900">
-                      {p.name}
-                    </span>
-                    <span className="ml-2 text-xs text-zinc-400">{p.email}</span>
+                  <div className="min-w-0">
+                    <span className="text-sm font-medium text-text">{p.name}</span>
+                    <span className="ml-2 text-xs text-text-secondary">{p.email}</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <select
                       value={p.role}
-                      onChange={(e) =>
-                        updateParticipantRole(p.userId, e.target.value)
-                      }
-                      className="rounded border border-zinc-200 px-2 py-1 text-xs text-zinc-700 focus:border-zinc-400 focus:outline-none"
+                      onChange={(e) => updateParticipantRole(p.userId, e.target.value)}
+                      className="h-8 rounded-lg border border-border px-2 text-xs text-text focus:border-primary focus:ring-2 focus:ring-primary/10"
                     >
                       {ROLES.map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
+                        <option key={r.value} value={r.value}>{r.label}</option>
                       ))}
                     </select>
                     <button
                       type="button"
                       onClick={() => removeParticipant(p.userId)}
-                      className="text-xs text-red-500 hover:text-red-600"
+                      className="text-xs font-medium text-error hover:text-error/80"
                     >
                       Remove
                     </button>
@@ -279,29 +198,19 @@ export default function CreateRoomPage() {
               ))}
             </div>
           )}
-        </div>
+        </Card>
 
         {submitError && (
-          <p className="text-sm text-red-600" role="alert">
-            {submitError}
-          </p>
+          <p className="text-sm text-error" role="alert">{submitError}</p>
         )}
 
         <div className="flex items-center gap-4">
-          <button
-            type="submit"
-            disabled={submitting || !name || !propertyId}
-            className="rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {submitting ? "Creating..." : "Create room"}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard")}
-            className="text-sm text-zinc-500 hover:text-zinc-700"
-          >
+          <Button type="submit" loading={submitting} disabled={!name || !propertyId}>
+            Create room
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => router.push("/dashboard")}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </div>

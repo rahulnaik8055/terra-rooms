@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthContext } from "@/providers/AuthProvider";
+import { Button, Card, Badge, RoleBadge, EmptyState, Skeleton } from "@/components/ui";
 
 interface Room {
   id: string;
@@ -11,14 +12,8 @@ interface Room {
   status: string;
   myRole: string;
   activityCount: number;
-  property: {
-    address: string;
-    city: string;
-    state: string;
-  };
-  participants: Array<{
-    user: { name: string };
-  }>;
+  property: { address: string; city: string; state: string };
+  participants: Array<{ user: { name: string } }>;
 }
 
 export default function DashboardPage() {
@@ -29,104 +24,98 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    if (!user) { router.push("/login"); return; }
     fetch("/api/rooms")
       .then((r) => r.json())
-      .then((data) => setRooms(data))
+      .then(setRooms)
       .catch(() => {})
       .finally(() => setFetching(false));
   }, [user, loading, router]);
 
   if (loading || !user) return null;
 
-  const statusColor: Record<string, string> = {
-    DRAFT: "bg-zinc-100 text-zinc-600",
-    IN_REVIEW: "bg-amber-50 text-amber-700",
-    LAWYER_VERIFIED: "bg-blue-50 text-blue-700",
-    BANK_APPROVED: "bg-green-50 text-green-700",
-    CLOSED: "bg-zinc-900 text-white",
-  };
-
   return (
-    <div className="mx-auto max-w-4xl px-6 py-12">
+    <div className="mx-auto max-w-6xl px-6 py-10">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-            Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Welcome, {user.name}.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-text">Dashboard</h1>
+          <p className="mt-1 text-sm text-text-secondary">Welcome, {user.name}.</p>
         </div>
-        <div className="flex items-center gap-3">
-          {user.role === "BUYER" && (
-            <Link
-              href="/rooms/create"
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800"
-            >
-              Create room
-            </Link>
-          )}
-        </div>
+        {user.role === "BUYER" && (
+          <Link href="/rooms/create">
+            <Button>Create room</Button>
+          </Link>
+        )}
       </div>
 
-      <div className="mt-10">
-        <h2 className="text-sm font-medium text-zinc-700">Your rooms</h2>
+      <section className="mt-10">
+        <h2 className="text-sm font-semibold text-text">Your rooms</h2>
 
         {fetching ? (
-          <p className="mt-6 text-sm text-zinc-400">Loading rooms...</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {[1, 2].map((i) => (
+              <Card key={i} className="p-6">
+                <Skeleton className="mb-3 h-4 w-3/5" />
+                <Skeleton className="mb-2 h-3 w-2/5" />
+                <div className="mt-4 flex gap-4">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </Card>
+            ))}
+          </div>
         ) : rooms.length === 0 ? (
-          <div className="mt-6 rounded-lg border border-zinc-200 px-6 py-12 text-center">
-            <p className="text-sm text-zinc-500">You haven&apos;t been added to any rooms yet.</p>
-            {user.role === "BUYER" && (
-              <Link
-                href="/rooms/create"
-                className="mt-3 inline-block text-sm font-medium text-zinc-900 hover:underline"
-              >
-                Create the first room
-              </Link>
-            )}
+          <div className="mt-4">
+            <EmptyState
+              title="No rooms yet"
+              description={user.role === "BUYER" ? "Create your first room to start collaborating." : "You haven't been added to any rooms."}
+              icon={
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                  <rect x="8" y="16" width="24" height="16" rx="3" stroke="currentColor" strokeWidth="2" />
+                  <path d="M20 6L8 16H32L20 6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                </svg>
+              }
+              action={user.role === "BUYER" ? <Link href="/rooms/create"><Button size="sm">Create room</Button></Link> : undefined}
+            />
           </div>
         ) : (
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {rooms.map((room) => (
-              <Link
-                key={room.id}
-                href={`/rooms/${room.id}`}
-                className="block rounded-lg border border-zinc-200 p-5 transition hover:border-zinc-300 hover:shadow-sm"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-sm font-medium text-zinc-900">
-                      {room.name}
-                    </h3>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      {room.property.address}, {room.property.city}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-md px-2 py-0.5 text-xs font-medium ${
-                        statusColor[room.status] ?? "bg-zinc-100 text-zinc-600"
-                      }`}
-                    >
+              <Link key={room.id} href={`/rooms/${room.id}`}>
+                <Card hover className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-semibold text-text">{room.name}</h3>
+                      <p className="mt-0.5 truncate text-xs text-text-secondary">
+                        {room.property.address}, {room.property.city}
+                      </p>
+                    </div>
+                    <Badge variant={statusVariant(room.status)} className="shrink-0">
                       {room.status.replace(/_/g, " ")}
-                    </span>
+                    </Badge>
                   </div>
-                </div>
-                <div className="mt-3 flex items-center gap-4 text-xs text-zinc-400">
-                  <span>{room.participants.length} participant{room.participants.length !== 1 ? "s" : ""}</span>
-                  <span>{room.activityCount} activit{room.activityCount === 1 ? "y" : "ies"}</span>
-                  <span className="font-medium text-zinc-500">You: {room.myRole}</span>
-                </div>
+                  <div className="mt-4 flex items-center gap-4 text-xs text-text-secondary">
+                    <span>{room.participants.length} participant{room.participants.length !== 1 ? "s" : ""}</span>
+                    <span>{room.activityCount} activit{room.activityCount === 1 ? "y" : "ies"}</span>
+                    <RoleBadge role={room.myRole} />
+                  </div>
+                </Card>
               </Link>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
+}
+
+function statusVariant(status: string): "default" | "success" | "warning" | "error" | "primary" {
+  switch (status) {
+    case "DRAFT": return "default";
+    case "IN_REVIEW": return "warning";
+    case "LAWYER_VERIFIED": return "primary";
+    case "BANK_APPROVED": return "success";
+    case "CLOSED": return "default";
+    default: return "default";
+  }
 }
