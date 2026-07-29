@@ -98,6 +98,13 @@ export async function PATCH(
       return updatedRoom;
     });
 
+    const socketIO = (globalThis as Record<string, unknown>).__io as
+      | { to: (room: string) => { emit: (event: string, ...args: unknown[]) => void } }
+      | undefined;
+    if (socketIO) {
+      socketIO.to(id).emit("room:status", { roomId: id, status: newStatus, updatedBy: userId });
+    }
+
     return NextResponse.json({
       id: updated.id,
       name: updated.name,

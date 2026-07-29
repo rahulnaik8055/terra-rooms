@@ -55,6 +55,8 @@ async function main() {
     addTrailingSlash: false,
   });
 
+  globalThis.__io = io;
+
   io.use(async (socket, next) => {
     try {
       const cookies = parseCookies(socket.handshake.headers.cookie);

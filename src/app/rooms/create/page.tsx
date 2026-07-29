@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useAuthContext } from "@/providers/AuthProvider";
 import { Button, Input, Select, Card } from "@/components/ui";
 
@@ -28,6 +28,9 @@ export default function CreateRoomPage() {
   const [selectedRole, setSelectedRole] = useState("BUYER");
   const [lookingUp, setLookingUp] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [creating, setCreating] = useState<{ email: string; name: string; password: string } | null>(null);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -37,31 +40,57 @@ export default function CreateRoomPage() {
     fetch("/api/properties").then((r) => r.json()).then(setProperties).catch(() => {});
   }, [user, loading, router]);
 
-  const lookupEmail = useCallback(async () => {
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
     const trimmed = emailInput.trim();
     if (!trimmed) return;
     setLookingUp(true);
     setLookupError(null);
     try {
       const res = await fetch(`/api/users?email=${encodeURIComponent(trimmed)}`);
-      if (!res.ok) {
-        const err = await res.json();
-        setLookupError(err.error || "User not found");
-        return;
+      if (res.ok) {
+        const found: UserResult = await res.json();
+        if (participants.some((p) => p.userId === found.id)) {
+          setLookupError(`${found.name} is already added`);
+          return;
+        }
+        setParticipants((prev) => [...prev, { userId: found.id, email: found.email, name: found.name, role: selectedRole }]);
+        setEmailInput("");
+      } else {
+        setCreating({ email: trimmed, name: trimmed.split("@")[0], password: "" });
+        setEmailInput("");
       }
-      const found: UserResult = await res.json();
-      if (participants.some((p) => p.userId === found.id)) {
-        setLookupError(`${found.name} is already added`);
-        return;
-      }
-      setParticipants((prev) => [...prev, { userId: found.id, email: found.email, name: found.name, role: selectedRole }]);
-      setEmailInput("");
     } catch {
       setLookupError("Failed to look up user");
     } finally {
       setLookingUp(false);
     }
-  }, [emailInput, selectedRole, participants]);
+  }
+
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!creating || !creating.name.trim() || !creating.password.trim()) return;
+    setCreatingUser(true);
+    setCreateError(null);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: creating.email, name: creating.name.trim(), password: creating.password, role: selectedRole }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to create user");
+      }
+      const newUser: UserResult = await res.json();
+      setParticipants((prev) => [...prev, { userId: newUser.id, email: newUser.email, name: newUser.name, role: selectedRole }]);
+      setCreating(null);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Failed to create user");
+    } finally {
+      setCreatingUser(false);
+    }
+  }
 
   function removeParticipant(userId: string) {
     setParticipants((prev) => prev.filter((p) => p.userId !== userId));
@@ -89,8 +118,7 @@ export default function CreateRoomPage() {
         const err = await res.json();
         throw new Error(err.error || "Failed to create room");
       }
-      const room = await res.json();
-      router.push(`/rooms/${room.id}`);
+      router.push("/dashboard");
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Failed to create room");
     } finally {
@@ -129,7 +157,7 @@ export default function CreateRoomPage() {
         <Card className="p-6 sm:p-8">
           <h2 className="text-sm font-semibold text-text">Participants</h2>
           <p className="mt-0.5 text-xs text-text-secondary">
-            Search by email to add participants. You will be added automatically as Buyer.
+            Enter an email to add participants. You will be added automatically as Buyer.
           </p>
 
           <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
@@ -138,7 +166,6 @@ export default function CreateRoomPage() {
                 type="email"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); lookupEmail(); } }}
                 placeholder="Email address"
               />
             </div>
@@ -153,7 +180,7 @@ export default function CreateRoomPage() {
                 type="button"
                 size="md"
                 variant="secondary"
-                onClick={lookupEmail}
+                onClick={handleAdd}
                 disabled={lookingUp || !emailInput.trim()}
                 loading={lookingUp}
                 className="shrink-0"
@@ -165,6 +192,38 @@ export default function CreateRoomPage() {
 
           {lookupError && (
             <p className="mt-2 text-xs text-error">{lookupError}</p>
+          )}
+
+          {creating && (
+            <div className="mt-3 rounded-xl border border-primary/30 bg-primary-light/20 px-4 sm:px-5 py-4">
+              <p className="text-sm font-medium text-text">
+                User &quot;{creating.email}&quot; not found — create one
+              </p>
+              <div className="mt-3 flex flex-col sm:flex-row gap-3">
+                <Input
+                  label="Name"
+                  value={creating.name}
+                  onChange={(e) => setCreating((prev) => prev ? { ...prev, name: e.target.value } : prev)}
+                  placeholder="Full name"
+                />
+                <Input
+                  label="Password"
+                  type="password"
+                  value={creating.password}
+                  onChange={(e) => setCreating((prev) => prev ? { ...prev, password: e.target.value } : prev)}
+                  placeholder="Set a password"
+                />
+              </div>
+              {createError && <p className="mt-2 text-xs text-error">{createError}</p>}
+              <div className="mt-3 flex items-center gap-2">
+                <Button type="button" size="sm" onClick={handleCreateUser} loading={creatingUser} disabled={!creating.name.trim() || !creating.password.trim()}>
+                  Create & add
+                </Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => { setCreating(null); setCreateError(null); }}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
           )}
 
           {participants.length > 0 && (

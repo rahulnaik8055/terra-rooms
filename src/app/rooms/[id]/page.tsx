@@ -6,7 +6,7 @@ import { useAuthContext } from "@/providers/AuthProvider";
 import { useSocket } from "@/hooks/useSocket";
 import { roleCanSetStatus } from "@/lib/permissions";
 import type { Role, RoomStatus } from "@/lib/permissions";
-import { Button, Badge, Card, RoleBadge, Spinner } from "@/components/ui";
+import { Button, Badge, Card, RoleBadge, StatusBadge, Spinner } from "@/components/ui";
 import { PropertyOverview } from "@/components/property/PropertyOverview";
 import { OwnershipHistory } from "@/components/property/OwnershipHistory";
 import { EncumbranceStatus } from "@/components/property/EncumbranceStatus";
@@ -166,7 +166,6 @@ export default function RoomDetailPage() {
       });
       if (!res.ok) throw new Error((await res.json()).error || "Failed to advance status");
       setRoom((prev) => prev ? { ...prev, status: next } : prev);
-      emitStatus(roomId, next);
       fetchRoom();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to advance status");
@@ -254,6 +253,68 @@ export default function RoomDetailPage() {
             </section>
 
             <section>
+              <h2 className="mb-3 sm:mb-4 text-sm font-semibold text-text">Status</h2>
+              <Card className="p-5 sm:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xs text-text-secondary">Current:</span>
+                  <StatusBadge status={room.status} />
+                </div>
+
+                <div className="space-y-0">
+                  {STEPS.map((step, i) => {
+                    const isCompleted = i < currentIdx;
+                    const isCurrent = i === currentIdx;
+                    return (
+                      <div key={step} className="relative flex items-start gap-3">
+                        {i < STEPS.length - 1 && (
+                          <div className={`absolute left-[11px] top-5 h-8 w-px transition-colors duration-500 ${isCompleted ? "bg-primary" : "bg-border"}`} />
+                        )}
+                        <div className="relative z-10 mt-0.5 flex shrink-0">
+                          {isCompleted ? (
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary transition-all duration-500">
+                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </div>
+                          ) : isCurrent ? (
+                            <div className="relative flex h-5 w-5 items-center justify-center">
+                              <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+                              <div className="relative h-5 w-5 rounded-full border-2 border-primary bg-surface" />
+                            </div>
+                          ) : (
+                            <div className="h-5 w-5 rounded-full border-2 border-border bg-surface" />
+                          )}
+                        </div>
+                        <div className={`${i < STEPS.length - 1 ? "pb-6" : ""} min-w-0`}>
+                          <span className={`text-sm transition-colors duration-300 break-words ${isCompleted || isCurrent ? "font-medium text-text" : "text-text-secondary/60"}`}>
+                            {STEP_LABELS[step]}
+                          </span>
+                          {isCurrent && <Badge className="ml-2">Current</Badge>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {canAdvance && (
+                  <Button className="mt-4 w-full truncate" onClick={handleAdvanceStatus} loading={advancingStatus}>
+                    Advance to {STEP_LABELS[nextStatus!]}
+                  </Button>
+                )}
+
+                {room.status === "CLOSED" && (
+                  <div className="mt-3 rounded-xl bg-primary-light px-4 py-2.5 text-center text-xs font-medium text-primary">
+                    This deal is closed.
+                  </div>
+                )}
+
+                {error && (
+                  <p className="mt-3 rounded-xl bg-error/10 px-3 py-2 text-xs text-error break-words" role="alert">{error}</p>
+                )}
+              </Card>
+            </section>
+
+            <section>
               <h2 className="mb-3 sm:mb-4 text-sm font-semibold text-text">
                 Activity
                 {room.activityLogs.length > 0 && (
@@ -315,61 +376,6 @@ export default function RoomDetailPage() {
           </div>
 
           <aside className="space-y-6 min-w-0">
-            <Card className="p-5 sm:p-6">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Status</h3>
-              <div className="mt-5">
-                {STEPS.map((step, i) => {
-                  const isCompleted = i < currentIdx;
-                  const isCurrent = i === currentIdx;
-                  return (
-                    <div key={step} className="relative flex items-start gap-3">
-                      {i < STEPS.length - 1 && (
-                        <div className={`absolute left-[11px] top-5 h-8 w-px transition-colors duration-500 ${isCompleted ? "bg-primary" : "bg-border"}`} />
-                      )}
-                      <div className="relative z-10 mt-0.5 flex shrink-0">
-                        {isCompleted ? (
-                          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary transition-all duration-500">
-                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                              <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </div>
-                        ) : isCurrent ? (
-                          <div className="relative flex h-5 w-5 items-center justify-center">
-                            <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
-                            <div className="relative h-5 w-5 rounded-full border-2 border-primary bg-surface" />
-                          </div>
-                        ) : (
-                          <div className="h-5 w-5 rounded-full border-2 border-border bg-surface" />
-                        )}
-                      </div>
-                      <div className="pb-6 min-w-0">
-                        <span className={`text-sm transition-colors duration-300 break-words ${isCompleted || isCurrent ? "font-medium text-text" : "text-text-secondary/60"}`}>
-                          {STEP_LABELS[step]}
-                        </span>
-                        {isCurrent && <Badge className="ml-2">Current</Badge>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {canAdvance && (
-                <Button className="mt-2 w-full truncate" onClick={handleAdvanceStatus} loading={advancingStatus}>
-                  Advance to {STEP_LABELS[nextStatus!]}
-                </Button>
-              )}
-
-              {room.status === "CLOSED" && (
-                <div className="mt-3 rounded-xl bg-primary-light px-4 py-2.5 text-center text-xs font-medium text-primary">
-                  This deal is closed.
-                </div>
-              )}
-
-              {error && (
-                <p className="mt-3 rounded-xl bg-error/10 px-3 py-2 text-xs text-error break-words" role="alert">{error}</p>
-              )}
-            </Card>
-
             <Card className="p-5 sm:p-6">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary">Participants</h3>
               <div className="mt-4 space-y-2.5">
