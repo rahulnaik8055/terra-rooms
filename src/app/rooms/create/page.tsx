@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuthContext } from "@/providers/AuthProvider";
-import { Button, Input, Select, Card } from "@/components/ui";
+import { Button, Input, Select, Card, RoleBadge } from "@/components/ui";
 
 const ROLES = [
   { value: "BUYER", label: "Buyer" },
@@ -25,10 +25,9 @@ export default function CreateRoomPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [participants, setParticipants] = useState<ParticipantEntry[]>([]);
   const [emailInput, setEmailInput] = useState("");
-  const [selectedRole, setSelectedRole] = useState("BUYER");
   const [lookingUp, setLookingUp] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
-  const [creating, setCreating] = useState<{ email: string; name: string; password: string } | null>(null);
+  const [creating, setCreating] = useState<{ email: string; name: string; password: string; role: string } | null>(null);
   const [creatingUser, setCreatingUser] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -54,10 +53,10 @@ export default function CreateRoomPage() {
           setLookupError(`${found.name} is already added`);
           return;
         }
-        setParticipants((prev) => [...prev, { userId: found.id, email: found.email, name: found.name, role: selectedRole }]);
+        setParticipants((prev) => [...prev, { userId: found.id, email: found.email, name: found.name, role: found.role }]);
         setEmailInput("");
       } else {
-        setCreating({ email: trimmed, name: trimmed.split("@")[0], password: "" });
+        setCreating({ email: trimmed, name: trimmed.split("@")[0], password: "", role: "" });
         setEmailInput("");
       }
     } catch {
@@ -69,21 +68,21 @@ export default function CreateRoomPage() {
 
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
-    if (!creating || !creating.name.trim() || !creating.password.trim()) return;
+    if (!creating || !creating.name.trim() || !creating.password.trim() || !creating.role) return;
     setCreatingUser(true);
     setCreateError(null);
     try {
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: creating.email, name: creating.name.trim(), password: creating.password, role: selectedRole }),
+        body: JSON.stringify({ email: creating.email, name: creating.name.trim(), password: creating.password, role: creating.role }),
       });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Failed to create user");
       }
       const newUser: UserResult = await res.json();
-      setParticipants((prev) => [...prev, { userId: newUser.id, email: newUser.email, name: newUser.name, role: selectedRole }]);
+      setParticipants((prev) => [...prev, { userId: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role }]);
       setCreating(null);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : "Failed to create user");
@@ -94,10 +93,6 @@ export default function CreateRoomPage() {
 
   function removeParticipant(userId: string) {
     setParticipants((prev) => prev.filter((p) => p.userId !== userId));
-  }
-
-  function updateParticipantRole(userId: string, role: string) {
-    setParticipants((prev) => prev.map((p) => (p.userId === userId ? { ...p, role } : p)));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -169,25 +164,17 @@ export default function CreateRoomPage() {
                 placeholder="Email address"
               />
             </div>
-            <div className="flex gap-2 sm:shrink-0">
-              <Select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                options={ROLES}
-                className="flex-1 sm:w-32"
-              />
-              <Button
-                type="button"
-                size="md"
-                variant="secondary"
-                onClick={handleAdd}
-                disabled={lookingUp || !emailInput.trim()}
-                loading={lookingUp}
-                className="shrink-0"
-              >
-                Add
-              </Button>
-            </div>
+            <Button
+              type="button"
+              size="md"
+              variant="secondary"
+              onClick={handleAdd}
+              disabled={lookingUp || !emailInput.trim()}
+              loading={lookingUp}
+              className="shrink-0"
+            >
+              Add
+            </Button>
           </div>
 
           {lookupError && (
@@ -213,10 +200,16 @@ export default function CreateRoomPage() {
                   onChange={(e) => setCreating((prev) => prev ? { ...prev, password: e.target.value } : prev)}
                   placeholder="Set a password"
                 />
+                <Select
+                  label="Role"
+                  value={creating.role}
+                  onChange={(e) => setCreating((prev) => prev ? { ...prev, role: e.target.value } : prev)}
+                  options={ROLES}
+                />
               </div>
               {createError && <p className="mt-2 text-xs text-error">{createError}</p>}
               <div className="mt-3 flex items-center gap-2">
-                <Button type="button" size="sm" onClick={handleCreateUser} loading={creatingUser} disabled={!creating.name.trim() || !creating.password.trim()}>
+                <Button type="button" size="sm" onClick={handleCreateUser} loading={creatingUser} disabled={!creating.name.trim() || !creating.password.trim() || !creating.role}>
                   Create & add
                 </Button>
                 <Button type="button" size="sm" variant="ghost" onClick={() => { setCreating(null); setCreateError(null); }}>
@@ -231,22 +224,14 @@ export default function CreateRoomPage() {
               {participants.map((p) => (
                 <div
                   key={p.userId}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-border px-4 py-3 gap-2 sm:gap-0"
+                  className="flex items-center justify-between rounded-xl border border-border px-4 py-3 gap-2"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <span className="text-sm font-medium text-text">{p.name}</span>
                     <span className="ml-2 text-xs text-text-secondary">{p.email}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <select
-                      value={p.role}
-                      onChange={(e) => updateParticipantRole(p.userId, e.target.value)}
-                      className="h-8 rounded-lg border border-border px-2 text-xs text-text focus:border-primary focus:ring-2 focus:ring-primary/10"
-                    >
-                      {ROLES.map((r) => (
-                        <option key={r.value} value={r.value}>{r.label}</option>
-                      ))}
-                    </select>
+                    <RoleBadge role={p.role} />
                     <button
                       type="button"
                       onClick={() => removeParticipant(p.userId)}

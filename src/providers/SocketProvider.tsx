@@ -5,7 +5,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { io, Socket } from "socket.io-client";
@@ -29,45 +28,74 @@ interface SocketProviderProps {
   children: React.ReactNode;
 }
 
+/* Module-level socket singleton — survives component unmount/remount */
+let sharedSocket: Socket | null = null;
+let sharedSocketUserId: string | null = null;
+let sharedConnectListeners = new Set<() => void>();
+let sharedDisconnectListeners = new Set<() => void>();
+
+function getOrCreateSocket(userId: string | null): Socket | null {
+  if (!userId) {
+    if (sharedSocket) {
+      sharedSocket.disconnect();
+      sharedSocket = null;
+      sharedSocketUserId = null;
+    }
+    return null;
+  }
+
+  if (sharedSocket && sharedSocketUserId === userId) {
+    return sharedSocket;
+  }
+
+  if (sharedSocket) {
+    sharedSocket.disconnect();
+    sharedSocket = null;
+  }
+
+  sharedSocketUserId = userId;
+  sharedSocket = io({
+    path: "/api/socket",
+    withCredentials: true,
+  });
+
+  sharedSocket.on("connect", () => {
+    sharedConnectListeners.forEach((fn) => fn());
+  });
+
+  sharedSocket.on("disconnect", () => {
+    sharedDisconnectListeners.forEach((fn) => fn());
+  });
+
+  return sharedSocket;
+}
+
 export function SocketProvider({ user, children }: SocketProviderProps) {
-  const socketRef = useRef<Socket | null>(null);
+  const userId = user?.id ?? null;
   const [connected, setConnected] = useState(false);
 
+  const socket = getOrCreateSocket(userId);
+
   useEffect(() => {
-    if (!user) {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-      setConnected(false);
-      return;
+    const onConnect = () => { setConnected(true); };
+    const onDisconnect = () => { setConnected(false); };
+
+    sharedConnectListeners.add(onConnect);
+    sharedDisconnectListeners.add(onDisconnect);
+
+    if (socket?.connected) {
+      setConnected(true);
     }
 
-    const socket = io({
-      path: "/api/socket",
-      withCredentials: true,
-    });
-
-    socketRef.current = socket;
-
-    socket.on("connect", () => {
-      setConnected(true);
-    });
-
-    socket.on("disconnect", () => {
-      setConnected(false);
-    });
-
     return () => {
-      socket.disconnect();
-      socketRef.current = null;
-      setConnected(false);
+      sharedConnectListeners.delete(onConnect);
+      sharedDisconnectListeners.delete(onDisconnect);
     };
-  }, [user]);
+  }, [userId, socket]);
 
   const emitActivity = useCallback(
     (roomId: string, payload: ActivityPayload) => {
-      socketRef.current?.emit("room:activity", {
+      sharedSocket?.emit("room:activity", {
         roomId,
         action: payload.action,
         details: payload.details,
@@ -78,19 +106,19 @@ export function SocketProvider({ user, children }: SocketProviderProps) {
 
   const emitStatus = useCallback(
     (roomId: string, status: string) => {
-      socketRef.current?.emit("room:status", { roomId, status });
+      sharedSocket?.emit("room:status", { roomId, status });
     },
     []
   );
 
   const value = useMemo(
     () => ({
-      socket: socketRef.current,
+      socket,
       connected,
       emitActivity,
       emitStatus,
     }),
-    [connected, emitActivity, emitStatus]
+    [socket, connected, emitActivity, emitStatus]
   );
 
   return (

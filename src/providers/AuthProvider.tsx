@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useMemo } from "react";
 import type { User } from "@/hooks/useAuth";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -27,10 +27,15 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const auth = useAuth();
+  const { user, loading, login, register, logout } = useAuth();
+
+  const value = useMemo(
+    () => ({ user, loading, login, register, logout }),
+    [user, loading, login, register, logout]
+  );
 
   return (
-    <AuthContext.Provider value={auth}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

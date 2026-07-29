@@ -140,8 +140,9 @@ export default function RoomDetailPage() {
   fetchRef.current = fetchRoom;
 
   useEffect(() => {
-    if (!socket) return;
-    socket.emit("room:join", roomId);
+    if (!socket) { console.log("[room] no socket yet"); return; }
+    console.log("[room] emitting room:join for", roomId);
+    socket.emit("room:join", { roomId });
     const onActivity = (data: { roomId: string }) => { if (data.roomId === roomId) fetchRef.current(); };
     const onStatus = (data: { roomId: string; status: string }) => {
       if (data.roomId !== roomId) return;

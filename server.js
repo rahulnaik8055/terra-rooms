@@ -98,6 +98,39 @@ async function main() {
 
     console.log(`Socket connected: ${userId} (${role})`);
 
+    socket.on("room:join", async (data, ack) => {
+      try {
+        const roomId = typeof data === "string" ? data : data.roomId;
+
+        console.log(`[room:join] user=${userId} room=${roomId} dataType=${typeof data}`);
+
+        if (!roomId) {
+          console.log(`[room:join] missing roomId, data=`, data);
+          if (ack) ack({ error: "roomId is required" });
+          return;
+        }
+
+        const participant = db
+          .prepare(
+            "SELECT COUNT(*) as count FROM Participant WHERE roomId = ? AND userId = ?"
+          )
+          .get(roomId, userId);
+
+        if (!participant || participant.count === 0) {
+          console.log(`[room:join] access denied for user=${userId} room=${roomId}`);
+          if (ack) ack({ error: "Access denied" });
+          return;
+        }
+
+        socket.join(roomId);
+        console.log(`[room:join] joined room=${roomId} for user=${userId}`);
+        if (ack) ack({ success: true });
+      } catch (err) {
+        console.error("room:join error:", err);
+        if (ack) ack({ error: "Internal error" });
+      }
+    });
+
     socket.on("room:activity", async (data, ack) => {
       try {
         const { roomId, action, details } = data;
